@@ -4,6 +4,7 @@ import asyncio
 import json
 import sqlite3
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -89,7 +90,7 @@ class PacuAdapter:
     async def create_session(self, session_name: str) -> str:
         """Create a new Pacu session."""
         cmd = [
-            "python", self.pacu_path,
+            sys.executable, self.pacu_path,
             "--session", session_name,
             "--non-interactive"
         ]
@@ -141,7 +142,7 @@ class PacuAdapter:
         
         # Build Pacu command
         cmd = [
-            "python", self.pacu_path,
+            sys.executable, self.pacu_path,
             "--session", session_name,
             "--module", module_name,
             "--non-interactive"
@@ -411,7 +412,7 @@ class PacuAdapter:
     async def health_check(self) -> bool:
         """Check if Pacu is available and working."""
         try:
-            cmd = ["python", self.pacu_path, "--help"]
+            cmd = [sys.executable, self.pacu_path, "--help"]
             
             result = await anyio.to_thread.run_sync(
                 self._run_pacu_health_check_subprocess,

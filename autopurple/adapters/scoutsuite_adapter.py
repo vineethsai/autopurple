@@ -3,6 +3,7 @@
 import asyncio
 import json
 import subprocess
+import sys
 import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -86,7 +87,7 @@ class ScoutSuiteAdapter:
         if self.scoutsuite_path.startswith("python -m"):
             # Module execution
             cmd = [
-                "python", "-m", "ScoutSuite",
+                sys.executable, "-m", "ScoutSuite",
                 "--provider", "aws",
                 "--report-dir", "/tmp/scoutsuite_reports",
                 "--report-name", f"autopurple_{uuid.uuid4().hex[:8]}",
@@ -95,7 +96,7 @@ class ScoutSuiteAdapter:
         else:
             # Direct executable
             cmd = [
-                "python", self.scoutsuite_path,
+                sys.executable, self.scoutsuite_path,
                 "--provider", "aws",
                 "--report-dir", "/tmp/scoutsuite_reports",
                 "--report-name", f"autopurple_{uuid.uuid4().hex[:8]}",
@@ -327,9 +328,9 @@ class ScoutSuiteAdapter:
         try:
             # Check if ScoutSuite module is available
             if self.scoutsuite_path.startswith("python -m"):
-                cmd = ["python", "-m", "ScoutSuite", "--help"]
+                cmd = [sys.executable, "-m", "ScoutSuite", "--help"]
             else:
-                cmd = ["python", self.scoutsuite_path, "--help"]
+                cmd = [sys.executable, self.scoutsuite_path, "--help"]
             
             result = await anyio.to_thread.run_sync(
                 self._run_health_check_subprocess,
