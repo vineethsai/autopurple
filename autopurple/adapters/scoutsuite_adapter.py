@@ -30,6 +30,13 @@ class ScoutSuiteAdapter:
     
     def _find_scoutsuite(self) -> Optional[str]:
         """Find ScoutSuite installation."""
+        # First try to import ScoutSuite as a module
+        try:
+            import ScoutSuite
+            return "python -m ScoutSuite"
+        except ImportError:
+            pass
+        
         # Try to find ScoutSuite in common locations
         possible_paths = [
             "scoutsuite",
@@ -39,8 +46,11 @@ class ScoutSuiteAdapter:
         ]
         
         for path in possible_paths:
-            if Path(path).exists():
-                return path
+            try:
+                if Path(path).exists():
+                    return path
+            except (TypeError, ValueError):
+                continue
         
         # Try to find via pip/conda
         try:
@@ -73,13 +83,24 @@ class ScoutSuiteAdapter:
         timeout = timeout or self.settings.scoutsuite_timeout
         
         # Build ScoutSuite command
-        cmd = [
-            "python", self.scoutsuite_path,
-            "--provider", "aws",
-            "--report-dir", "/tmp/scoutsuite_reports",
-            "--report-name", f"autopurple_{uuid.uuid4().hex[:8]}",
-            "--format", "json"
-        ]
+        if self.scoutsuite_path.startswith("python -m"):
+            # Module execution
+            cmd = [
+                "python", "-m", "ScoutSuite",
+                "--provider", "aws",
+                "--report-dir", "/tmp/scoutsuite_reports",
+                "--report-name", f"autopurple_{uuid.uuid4().hex[:8]}",
+                "--format", "json"
+            ]
+        else:
+            # Direct executable
+            cmd = [
+                "python", self.scoutsuite_path,
+                "--provider", "aws",
+                "--report-dir", "/tmp/scoutsuite_reports",
+                "--report-name", f"autopurple_{uuid.uuid4().hex[:8]}",
+                "--format", "json"
+            ]
         
         if aws_profile:
             cmd.extend(["--profile", aws_profile])
@@ -295,13 +316,23 @@ class ScoutSuiteAdapter:
     async def health_check(self) -> bool:
         """Check if ScoutSuite is available and working."""
         try:
-            result = await anyio.to_thread.run_sync(
-                subprocess.run,
-                ["python", self.scoutsuite_path, "--help"],
-                capture_output=True,
-                text=True,
-                timeout=10
-            )
+            # Check if ScoutSuite module is available
+            if self.scoutsuite_path.startswith("python -m"):
+                result = await anyio.to_thread.run_sync(
+                    subprocess.run,
+                    ["python", "-m", "ScoutSuite", "--help"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
+            else:
+                result = await anyio.to_thread.run_sync(
+                    subprocess.run,
+                    ["python", self.scoutsuite_path, "--help"],
+                    capture_output=True,
+                    text=True,
+                    timeout=10
+                )
             
             return result.returncode == 0
             
