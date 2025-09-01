@@ -416,4 +416,36 @@ class PacuAdapter:
         except Exception as e:
             logger.error("Pacu health check failed", error=str(e))
             return False
+    
+    def _generate_mock_validation_result(self, module_name: str) -> Dict[str, Any]:
+        """Generate mock validation result for testing."""
+        # Simulate Pacu validation results based on module name
+        if 'iam' in module_name:
+            return {
+                'stdout': 'Found 2 attached policies with overly permissive access',
+                'stderr': '',
+                'success': True,
+                'exploitable': True
+            }
+        elif 's3' in module_name:
+            return {
+                'stdout': 'Bucket is publicly accessible and exploitable',
+                'stderr': '',
+                'success': True,
+                'exploitable': True
+            }
+        elif 'ec2' in module_name:
+            return {
+                'stdout': 'Security group allows unrestricted access',
+                'stderr': '',
+                'success': True,
+                'exploitable': False
+            }
+        else:
+            return {
+                'stdout': 'Mock validation completed',
+                'stderr': '',
+                'success': True,
+                'exploitable': False
+            }
 
