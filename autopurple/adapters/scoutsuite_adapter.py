@@ -313,26 +313,28 @@ class ScoutSuiteAdapter:
         
         return severity_map.get(scoutsuite_level.lower(), 'medium')
     
+    def _run_health_check_subprocess(self, cmd: List[str]) -> subprocess.CompletedProcess:
+        """Run health check subprocess."""
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+    
     async def health_check(self) -> bool:
         """Check if ScoutSuite is available and working."""
         try:
             # Check if ScoutSuite module is available
             if self.scoutsuite_path.startswith("python -m"):
-                result = await anyio.to_thread.run_sync(
-                    subprocess.run,
-                    ["python", "-m", "ScoutSuite", "--help"],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
+                cmd = ["python", "-m", "ScoutSuite", "--help"]
             else:
-                result = await anyio.to_thread.run_sync(
-                    subprocess.run,
-                    ["python", self.scoutsuite_path, "--help"],
-                    capture_output=True,
-                    text=True,
-                    timeout=10
-                )
+                cmd = ["python", self.scoutsuite_path, "--help"]
+            
+            result = await anyio.to_thread.run_sync(
+                self._run_health_check_subprocess,
+                cmd
+            )
             
             return result.returncode == 0
             

@@ -31,8 +31,9 @@ class PacuAdapter:
         if not self.pacu_path:
             raise ValueError("Pacu not found. Please install Pacu or provide path.")
         
+        # Session database is optional for health checks
         if not self.session_db_path:
-            raise ValueError("Pacu session database not found.")
+            logger.warning("Pacu session database not found. Some features may be limited.")
     
     def _find_pacu(self) -> Optional[str]:
         """Find Pacu installation."""
@@ -45,8 +46,11 @@ class PacuAdapter:
         ]
         
         for path in possible_paths:
-            if Path(path).exists():
-                return path
+            try:
+                if Path(path).exists():
+                    return path
+            except (TypeError, ValueError):
+                continue
         
         # Try to find via pip/conda
         try:
@@ -69,13 +73,16 @@ class PacuAdapter:
         possible_paths = [
             Path.home() / ".local/share/pacu/sessions.sqlite",
             Path.home() / "pacu/sessions.sqlite",
-            "external/Pacu/sessions.sqlite",
-            "/tmp/pacu_sessions.sqlite",
+            Path("external/Pacu/sessions.sqlite"),
+            Path("/tmp/pacu_sessions.sqlite"),
         ]
         
         for path in possible_paths:
-            if path.exists():
-                return str(path)
+            try:
+                if path.exists():
+                    return str(path)
+            except (TypeError, ValueError):
+                continue
         
         return None
     
@@ -392,15 +399,23 @@ class PacuAdapter:
             )
             raise
     
+    def _run_pacu_health_check_subprocess(self, cmd: List[str]) -> subprocess.CompletedProcess:
+        """Run Pacu health check subprocess."""
+        return subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+    
     async def health_check(self) -> bool:
         """Check if Pacu is available and working."""
         try:
+            cmd = ["python", self.pacu_path, "--help"]
+            
             result = await anyio.to_thread.run_sync(
-                subprocess.run,
-                ["python", self.pacu_path, "--help"],
-                capture_output=True,
-                text=True,
-                timeout=10
+                self._run_pacu_health_check_subprocess,
+                cmd
             )
             
             return result.returncode == 0
