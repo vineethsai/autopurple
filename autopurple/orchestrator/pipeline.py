@@ -1,6 +1,7 @@
 """Main pipeline orchestrator for AutoPurple."""
 
 import asyncio
+import os
 import time
 from datetime import datetime
 from typing import Any, Dict, List, Optional
@@ -136,8 +137,13 @@ class AutoPurplePipeline:
         
         try:
             # Run ScoutSuite discovery
+            # Only pass profile if not using environment variables
+            aws_profile = None
+            if not (os.environ.get('AWS_ACCESS_KEY_ID') and os.environ.get('AWS_SECRET_ACCESS_KEY')):
+                aws_profile = run.aws_account
+            
             scoutsuite_data = await self.scoutsuite.run_discovery(
-                aws_profile=run.aws_account,
+                aws_profile=aws_profile,
                 aws_region=run.aws_region
             )
             

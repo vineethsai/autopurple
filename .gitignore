@@ -175,6 +175,8 @@ logs/
 # AWS credentials and config
 .aws/
 aws-credentials.json
+rootkey.csv
+*.csv
 
 # ScoutSuite reports
 scoutsuite_reports/

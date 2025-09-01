@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import os
 import subprocess
 import sys
 import uuid
@@ -87,24 +88,22 @@ class ScoutSuiteAdapter:
         report_name = f"autopurple_{uuid.uuid4().hex[:8]}"
         report_dir = "/tmp/scoutsuite_reports"
         
-        if self.scoutsuite_path.startswith("python -m"):
-            # Module execution
-            cmd = [
-                sys.executable, "-m", "ScoutSuite",
-                "--provider", "aws",
-                "--report-dir", report_dir,
-                "--report-name", report_name
-            ]
-        else:
-            # Direct executable
-            cmd = [
-                sys.executable, self.scoutsuite_path,
-                "--provider", "aws",
-                "--report-dir", report_dir,
-                "--report-name", report_name
-            ]
+        # Use the scout command from the virtual environment
+        scout_path = f"{sys.executable.replace('python3.11', 'scout')}"
+        cmd = [
+            scout_path, "aws",
+            "--report-dir", report_dir,
+            "--report-name", report_name
+        ]
         
-        if aws_profile:
+        # Use access keys if environment variables are set, otherwise use profile
+        if os.environ.get('AWS_ACCESS_KEY_ID') and os.environ.get('AWS_SECRET_ACCESS_KEY'):
+            cmd.extend([
+                "--access-keys",
+                "--access-key-id", os.environ.get('AWS_ACCESS_KEY_ID'),
+                "--secret-access-key", os.environ.get('AWS_SECRET_ACCESS_KEY')
+            ])
+        elif aws_profile:
             cmd.extend(["--profile", aws_profile])
         
         if aws_region:
@@ -164,7 +163,7 @@ class ScoutSuiteAdapter:
     
     def _get_environment(self) -> Dict[str, str]:
         """Get environment variables for ScoutSuite execution."""
-        env = {}
+        env = os.environ.copy()
         
         # Add AWS environment variables if configured
         if self.settings.aws_profile:
@@ -356,11 +355,9 @@ class ScoutSuiteAdapter:
     async def health_check(self) -> bool:
         """Check if ScoutSuite is available and working."""
         try:
-            # Check if ScoutSuite module is available
-            if self.scoutsuite_path.startswith("python -m"):
-                cmd = [sys.executable, "-m", "ScoutSuite", "--help"]
-            else:
-                cmd = [sys.executable, self.scoutsuite_path, "--help"]
+            # Use the scout command from the virtual environment
+            scout_path = f"{sys.executable.replace('python3.11', 'scout')}"
+            cmd = [scout_path, "--help"]
             
             result = await anyio.to_thread.run_sync(
                 self._run_health_check_subprocess,
