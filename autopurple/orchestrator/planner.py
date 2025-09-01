@@ -139,7 +139,7 @@ Return your analysis as JSON with the following structure:
             
             # Make the API call to Claude
             response = self.client.messages.create(
-                model="claude-3-5-sonnet-20240620",
+                model="claude-3-5-haiku-20241022",
                 max_tokens=4000,
                 messages=[
                     {

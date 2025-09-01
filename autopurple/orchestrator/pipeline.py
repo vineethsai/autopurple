@@ -35,17 +35,19 @@ class AutoPurplePipeline:
         self.planner = ClaudePlanner()
         self.validator = PostRemediationValidator()
         
-        # MCP clients
+        # MCP clients - using stdio instead of HTTP
         self.ccapi_client = None
         self.cfn_client = None
         self.docs_client = None
         
-        if self.settings.mcp_endpoint_ccapi:
-            self.ccapi_client = CCAPIClient()
-        if self.settings.mcp_endpoint_cfn:
-            self.cfn_client = CloudFormationClient()
-        if self.settings.mcp_endpoint_docs:
-            self.docs_client = DocsClient()
+        # Import stdio clients
+        try:
+            from ..adapters.mcp.stdio_client import AWSCCAPIMCPClient, AWSDocsMCPClient
+            self.ccapi_client = AWSCCAPIMCPClient()
+            self.docs_client = AWSDocsMCPClient()
+            logger.info("Initialized stdio MCP clients")
+        except Exception as e:
+            logger.warning("Failed to initialize MCP clients", error=str(e))
     
     async def execute(
         self,
@@ -263,12 +265,36 @@ class AutoPurplePipeline:
             remediation_plans = []
             
             for finding in exploitable_findings:
-                # Skip docs client for now and use empty guidance
-                guidance = {
-                    "service": finding.service,
-                    "title": finding.title,
-                    "mock_guidance": "Use security best practices for this service"
-                }
+                # Get remediation guidance from AWS docs MCP server
+                guidance = {}
+                if self.docs_client:
+                    try:
+                        # Start the docs client
+                        await self.docs_client.start()
+                        
+                        # Search for documentation
+                        guidance = await self.docs_client.search_documentation(
+                            f"{finding.service} {finding.title} security remediation"
+                        )
+                        
+                        # Stop the docs client
+                        await self.docs_client.stop()
+                        
+                        logger.info(f"Retrieved AWS docs guidance for {finding.service}")
+                        
+                    except Exception as e:
+                        logger.warning(f"Failed to get AWS docs guidance: {e}")
+                        guidance = {
+                            "service": finding.service,
+                            "title": finding.title,
+                            "fallback_guidance": "Use AWS security best practices for this service"
+                        }
+                else:
+                    guidance = {
+                        "service": finding.service,
+                        "title": finding.title,
+                        "manual_guidance": "Use AWS security best practices for this service"
+                    }
                 
                 # Plan remediation using Claude
                 plan = await self.planner.plan_remediation(finding, guidance, run)
