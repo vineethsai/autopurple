@@ -187,6 +187,8 @@ class DocsClient:
         
         return await self.call("get_example_code", payload, dry_run=dry_run)
     
+
+
     async def health_check(self) -> Dict[str, Any]:
         """Check if the Docs MCP server is healthy."""
         try:

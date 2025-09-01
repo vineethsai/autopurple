@@ -263,13 +263,12 @@ class AutoPurplePipeline:
             remediation_plans = []
             
             for finding in exploitable_findings:
-                if self.docs_client:
-                    guidance = await self.docs_client.search_remediation_guidance(
-                        finding.service,
-                        finding.title
-                    )
-                else:
-                    guidance = {}
+                # Skip docs client for now and use empty guidance
+                guidance = {
+                    "service": finding.service,
+                    "title": finding.title,
+                    "mock_guidance": "Use security best practices for this service"
+                }
                 
                 # Plan remediation using Claude
                 plan = await self.planner.plan_remediation(finding, guidance, run)

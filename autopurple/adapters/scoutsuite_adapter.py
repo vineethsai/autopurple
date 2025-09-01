@@ -114,7 +114,9 @@ class ScoutSuiteAdapter:
             cmd=" ".join(cmd),
             timeout=timeout,
             profile=aws_profile,
-            region=aws_region
+            region=aws_region,
+            env_aws_access_key_id=os.environ.get('AWS_ACCESS_KEY_ID', 'NOT SET'),
+            env_aws_secret_key='SET' if os.environ.get('AWS_SECRET_ACCESS_KEY') else 'NOT SET'
         )
         
         try:

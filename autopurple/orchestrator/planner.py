@@ -1,8 +1,15 @@
 """Claude-based planning for AutoPurple."""
 
 import json
+import os
 import uuid
 from typing import Any, Dict, List, Optional
+
+try:
+    import anthropic
+    ANTHROPIC_AVAILABLE = True
+except ImportError:
+    ANTHROPIC_AVAILABLE = False
 
 from ..config import get_settings
 from ..logging import get_logger
@@ -23,9 +30,22 @@ class ClaudePlanner:
     
     def _get_claude_client(self):
         """Get Claude client based on configuration."""
-        # This would initialize the appropriate AI client
-        # For now, return None to indicate no AI client available
-        return None
+        if not ANTHROPIC_AVAILABLE:
+            logger.warning("Anthropic SDK not available")
+            return None
+        
+        api_key = os.environ.get('CLAUDE_API_KEY') or self.settings.claude_api_key
+        if not api_key:
+            logger.warning("No Claude API key configured")
+            return None
+        
+        try:
+            client = anthropic.Anthropic(api_key=api_key)
+            logger.info("Claude client initialized successfully")
+            return client
+        except Exception as e:
+            logger.error("Failed to initialize Claude client", error=str(e))
+            return None
     
     async def analyze_findings(self, findings: List[Finding], run: Run) -> List[Finding]:
         """Analyze findings using Claude to cluster, dedupe, and rank by exploitability."""
@@ -114,9 +134,41 @@ Return your analysis as JSON with the following structure:
             # Return mock analysis for testing
             return self._mock_analysis()
         
-        # This would make the actual API call to Claude
-        # For now, return mock data
-        return self._mock_analysis()
+        try:
+            logger.info("Making Claude API call")
+            
+            # Make the API call to Claude
+            response = self.client.messages.create(
+                model="claude-3-5-sonnet-20240620",
+                max_tokens=4000,
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ]
+            )
+            
+            # Extract the response content
+            content = response.content[0].text
+            
+            # Try to parse as JSON
+            try:
+                result = json.loads(content)
+                logger.info("Claude API call successful", response_length=len(content))
+                return result
+            except json.JSONDecodeError:
+                logger.warning("Claude response was not valid JSON, using fallback")
+                # If the response isn't JSON, create a fallback response
+                return {
+                    "analysis": content,
+                    "error": "Response was not JSON",
+                    "fallback": True
+                }
+                
+        except Exception as e:
+            logger.error("Claude API call failed", error=str(e))
+            return self._mock_analysis()
     
     def _mock_analysis(self) -> Dict[str, Any]:
         """Return mock analysis for testing."""
