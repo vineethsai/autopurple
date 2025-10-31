@@ -2,15 +2,12 @@
 
 from .scoutsuite_adapter import ScoutSuiteAdapter
 from .pacu_adapter import PacuAdapter
-from .mcp.ccapi_client import CCAPIClient
-from .mcp.cfn_client import CloudFormationClient
-from .mcp.docs_client import DocsClient
+
+# MCP HTTP clients are optional (require aiohttp) - use stdio clients instead
+# They're available from .mcp package if needed
 
 __all__ = [
     "ScoutSuiteAdapter",
-    "PacuAdapter", 
-    "CCAPIClient",
-    "CloudFormationClient",
-    "DocsClient",
+    "PacuAdapter",
 ]
 

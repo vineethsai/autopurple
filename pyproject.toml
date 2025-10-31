@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "autopurple"
-version = "0.1.0"
-description = "AI-driven AWS security automation system extending ScoutSuite and Pacu"
+version = "1.2.1"
+description = "Claude-powered AWS security automation: discover vulnerabilities with ScoutSuite, validate with Pacu, and remediate via AWS MCP servers"
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
@@ -13,14 +13,18 @@ authors = [
 ]
 keywords = ["aws", "security", "automation", "scoutsuite", "pacu", "mcp"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Intended Audience :: Information Technology",
+    "Intended Audience :: System Administrators",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Topic :: Security",
-    "Topic :: System :: Systems Administration",
+    "Topic :: System :: Systems Administration", 
+    "Topic :: Internet :: WWW/HTTP :: HTTP Servers",
+    "Environment :: Console",
+    "Operating System :: OS Independent",
 ]
 requires-python = ">=3.11"
 dependencies = [
@@ -32,13 +36,19 @@ dependencies = [
     "anyio>=4.2.0",
     "tenacity>=8.2.0",
     "sqlite-utils>=3.35.0",
-    "sqlalchemy[asyncio]>=2.0.0",
+    "sqlalchemy[asyncio]>=1.3.0,<2.0.0",
     "aiosqlite>=0.19.0",
     "boto3>=1.34.0",
     "botocore>=1.34.0",
     "structlog>=23.2.0",
     "click>=8.1.0",
     "typer>=0.9.0",
+    "anthropic>=0.7.0",
+    "scoutsuite>=5.14.0",
+    "netaddr>=0.8.0",
+    "python-dateutil>=2.8.0",
+    "uv>=0.4.0",
+    "pyyaml>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -52,26 +62,97 @@ dev = [
     "black>=23.0.0",
     "pre-commit>=3.5.0",
 ]
+validation = [
+    "pacu>=1.6.1",
+]
 ai = [
     "openai>=1.3.0",
-    "anthropic>=0.7.0",
 ]
 aws = [
     "moto>=4.2.0",
     "aws-cdk-lib>=2.100.0",
 ]
+all = [
+    "pacu>=1.6.1",
+    "openai>=1.3.0",
+    "moto>=4.2.0",
+    "aws-cdk-lib>=2.100.0",
+]
 
 [project.scripts]
-autopurple = "autopurple.cli.main:app"
+autopurple = "autopurple.cli.main:main"
+autopurple-install = "autopurple.cli.install:post_install"
 
 [project.urls]
 Homepage = "https://github.com/autopurple/autopurple"
 Repository = "https://github.com/autopurple/autopurple"
 Documentation = "https://autopurple.readthedocs.io"
-Issues = "https://github.com/autopurple/autopurple/issues"
+
+[tool.hatch.build]
+include = [
+  "autopurple",
+  "README.md",
+  "LICENSE",
+  "INSTALL.md",
+  "AUTOPURPLE_CLAUDE_INTEGRATION.md",
+  "DEMO_COMMANDS.md",
+  "CLAUDE_API_SETUP.md",
+  "MANIFEST.in",
+  "pyproject.toml",
+]
+exclude = [
+  "venv/**",
+  ".venv/**",
+  "clean_env/**",
+  "test_env/**",
+  "test_run/**",
+  "test_py311/**",
+  "tp/**",
+  "dist/**",
+  "build/**",
+  "**/__pycache__/**",
+  "*.egg-info/**",
+  ".tox/**",
+  ".pytest_cache/**",
+]
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+  "venv/**",
+  ".venv/**",
+  "clean_env/**",
+  "test_env/**",
+  "test_run/**",
+  "test_py311/**",
+  "tp/**",
+  "dist/**",
+  "build/**",
+  "**/__pycache__/**",
+  "*.egg-info/**",
+  ".tox/**",
+  ".pytest_cache/**",
+]
 
 [tool.hatch.build.targets.wheel]
-packages = ["autopurple"]
+exclude = [
+  "venv/**",
+  ".venv/**",
+  "clean_env/**",
+  "test_env/**",
+  "test_run/**",
+  "test_py311/**",
+  "tp/**",
+  "dist/**",
+  "build/**",
+  "**/__pycache__/**",
+  "*.egg-info/**",
+  ".tox/**",
+  ".pytest_cache/**",
+]
+Issues = "https://github.com/autopurple/autopurple/issues"
+
+#[tool.hatch.build.targets.wheel]
+#packages = ["autopurple"]
 
 [tool.mypy]
 python_version = "3.11"

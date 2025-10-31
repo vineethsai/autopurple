@@ -13,7 +13,7 @@ ValidationTool = Literal['pacu']
 ValidationStatus = Literal['exploitable', 'not_exploitable', 'error']
 
 
-@dataclass(slots=True)
+@dataclass
 class ValidationResult(DataClassJsonMixin):
     """A validation result from Pacu or other tools."""
     

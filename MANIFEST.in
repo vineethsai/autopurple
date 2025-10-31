@@ -1,0 +1,17 @@
+include README.md
+include LICENSE
+include INSTALL.md
+include AUTOPURPLE_CLAUDE_INTEGRATION.md
+include DEMO_COMMANDS.md
+include CLAUDE_API_SETUP.md
+include env.example
+recursive-include autopurple *.py
+recursive-include autopurple *.sql
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]
+recursive-exclude * .DS_Store
+exclude debug_mcp.py
+exclude test_*.py
+exclude venv
+exclude .env
+exclude rootkey.csv

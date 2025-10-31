@@ -16,14 +16,33 @@ from ..logging import get_logger
 from ..models.runs import Run
 from ..orchestrator.pipeline import AutoPurplePipeline
 
+console = Console()
+logger = get_logger(__name__)
+
 app = typer.Typer(
     name="autopurple",
     help="AI-driven AWS security automation system",
     add_completion=False
 )
 
-console = Console()
-logger = get_logger(__name__)
+# Setup command
+@app.command("setup", help="Setup wizard for AutoPurple")
+def setup(
+    non_interactive: bool = typer.Option(False, "--non-interactive", help="Run without prompts"),
+    claude_key: Optional[str] = typer.Option(None, "--claude-key", help="Anthropic Claude API key"),
+    no_mcp: bool = typer.Option(False, "--no-mcp", help="Skip MCP server installation"),
+    yes: bool = typer.Option(False, "-y", "--yes", help="Assume yes to all prompts"),
+):
+    """Setup wizard for AutoPurple."""
+    try:
+        from .setup import setup_command
+        setup_command()
+    except ImportError as e:
+        console.print(f"[red]Setup wizard error: {e}[/red]")
+        console.print("Run: pip install autopurple --upgrade")
+    except Exception as e:
+        console.print(f"[red]Setup failed: {e}[/red]")
+        raise typer.Exit(1)
 
 
 @app.command()
@@ -285,6 +304,9 @@ async def _show_status() -> None:
 async def _check_health() -> None:
     """Check health of all components."""
     try:
+        import os
+        from ..adapters.mcp.manager import mcp_manager
+        settings = get_settings()
         # Check database
         await init_database()
         console.print("✅ Database: [green]OK[/green]")
@@ -305,35 +327,22 @@ async def _check_health() -> None:
         else:
             console.print("❌ Pacu: [red]FAILED[/red]")
         
-        # Check MCP servers
-        settings = get_settings()
-        
-        if settings.mcp_endpoint_ccapi:
-            from ..adapters.mcp.ccapi_client import CCAPIClient
-            ccapi = CCAPIClient()
-            try:
-                await ccapi.health_check()
-                console.print("✅ CCAPI MCP: [green]OK[/green]")
-            except Exception:
-                console.print("❌ CCAPI MCP: [red]FAILED[/red]")
-        
-        if settings.mcp_endpoint_cfn:
-            from ..adapters.mcp.cfn_client import CloudFormationClient
-            cfn = CloudFormationClient()
-            try:
-                await cfn.health_check()
-                console.print("✅ CloudFormation MCP: [green]OK[/green]")
-            except Exception:
-                console.print("❌ CloudFormation MCP: [red]FAILED[/red]")
-        
-        if settings.mcp_endpoint_docs:
-            from ..adapters.mcp.docs_client import DocsClient
-            docs = DocsClient()
-            try:
-                await docs.health_check()
-                console.print("✅ Docs MCP: [green]OK[/green]")
-            except Exception:
-                console.print("❌ Docs MCP: [red]FAILED[/red]")
+        # Check MCP servers via manager (stdio based)
+        try:
+            mcp_health = await mcp_manager.health_check()
+            ccapi_ok = mcp_health.get("ccapi", False)
+            docs_ok = mcp_health.get("docs", False)
+            console.print(f"{'✅' if ccapi_ok else '❌'} CCAPI MCP: [{'green' if ccapi_ok else 'red'}]{'OK' if ccapi_ok else 'FAILED'}[/{'green' if ccapi_ok else 'red'}]")
+            console.print(f"{'✅' if docs_ok else '❌'} Docs MCP: [{'green' if docs_ok else 'red'}]{'OK' if docs_ok else 'FAILED'}[/{'green' if docs_ok else 'red'}]")
+        except Exception:
+            console.print("❌ MCP Manager: [red]FAILED[/red]")
+
+        # Check Claude key presence/format (lightweight)
+        claude_key = os.environ.get('CLAUDE_API_KEY', '') or getattr(settings, 'claude_api_key', '')
+        if isinstance(claude_key, str) and claude_key.startswith('sk-ant-api'):
+            console.print("✅ Claude API key: [green]PRESENT[/green]")
+        else:
+            console.print("⚠️  Claude API key: [yellow]MISSING or invalid format[/yellow]")
         
     except Exception as e:
         console.print(f"[red]Health check failed: {e}[/red]")
@@ -385,6 +394,10 @@ def _display_pipeline_results(result: dict) -> None:
         console.print(findings_table)
 
 
-if __name__ == "__main__":
+def main():
+    """Main entry point for the autopurple CLI."""
     app()
+
+if __name__ == "__main__":
+    main()
 

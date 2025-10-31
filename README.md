@@ -1,6 +1,13 @@
-# AutoPurple
+# 🟣 AutoPurple
 
-AI-driven AWS security automation system that extends **ScoutSuite** (discovery) and **Pacu** (exploit validation), and uses **Claude** for orchestration/analysis plus **AWS MCP Servers** for **all** remediation.
+[![PyPI version](https://badge.fury.io/py/autopurple.svg)](https://badge.fury.io/py/autopurple)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Security](https://img.shields.io/badge/security-focused-red.svg)](https://github.com/autopurple/autopurple)
+
+**Claude-powered AWS security automation: discover vulnerabilities with ScoutSuite, validate with Pacu, and remediate via AWS MCP servers**
+
+AutoPurple is an intelligent AWS security automation system that combines the power of ScoutSuite discovery, Claude AI analysis, Pacu validation, and AWS MCP servers for end-to-end security remediation.
 
 ## 🎯 Mission
 

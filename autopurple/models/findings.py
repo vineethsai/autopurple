@@ -14,7 +14,7 @@ FindingSource = Literal['scoutsuite']
 FindingStatus = Literal['new', 'validated', 'dismissed', 'remediated']
 
 
-@dataclass(slots=True)
+@dataclass
 class Finding(DataClassJsonMixin):
     """A security finding from ScoutSuite or other sources."""
     

@@ -12,7 +12,7 @@ from dataclasses_json import DataClassJsonMixin, config
 RunStatus = Literal['started', 'validated', 'remediated', 'failed']
 
 
-@dataclass(slots=True)
+@dataclass
 class Run(DataClassJsonMixin):
     """A pipeline execution run."""
     

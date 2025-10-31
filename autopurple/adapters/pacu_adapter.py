@@ -6,6 +6,7 @@ import sqlite3
 import subprocess
 import sys
 import uuid
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
@@ -38,22 +39,15 @@ class PacuAdapter:
     
     def _find_pacu(self) -> Optional[str]:
         """Find Pacu installation."""
-        # Try to find Pacu in common locations
-        possible_paths = [
-            "pacu",
-            "Pacu/pacu.py",
-            "external/Pacu/pacu.py",
-            "/usr/local/bin/pacu",
-        ]
+        # First, try to import pacu as a Python module (best option)
+        try:
+            import pacu
+            # Pacu is installed as a module, use python -m pacu
+            return sys.executable  # Will use with "-m pacu"
+        except ImportError:
+            pass
         
-        for path in possible_paths:
-            try:
-                if Path(path).exists():
-                    return path
-            except (TypeError, ValueError):
-                continue
-        
-        # Try to find via pip/conda
+        # Try to find via which/whereis
         try:
             result = subprocess.run(
                 ["which", "pacu"],
@@ -62,9 +56,27 @@ class PacuAdapter:
                 timeout=5
             )
             if result.returncode == 0:
-                return result.stdout.strip()
+                pacu_path = result.stdout.strip()
+                if Path(pacu_path).exists():
+                    return pacu_path
         except (subprocess.TimeoutExpired, FileNotFoundError):
             pass
+        
+        # Try to find Pacu in common locations
+        possible_paths = [
+            "pacu",
+            "Pacu/pacu.py",
+            "external/Pacu/pacu.py",
+            "/usr/local/bin/pacu",
+            "/opt/homebrew/bin/pacu",
+        ]
+        
+        for path in possible_paths:
+            try:
+                if Path(path).exists():
+                    return path
+            except (TypeError, ValueError):
+                continue
         
         return None
     
@@ -89,10 +101,12 @@ class PacuAdapter:
     
     async def create_session(self, session_name: str) -> str:
         """Create a new Pacu session."""
-        cmd = [
-            sys.executable, self.pacu_path,
-            "--new-session", session_name
-        ]
+        # Build Pacu command
+        # If pacu_path is the Python executable, use -m pacu, otherwise use directly
+        if self.pacu_path == sys.executable or Path(self.pacu_path).name == "python3" or Path(self.pacu_path).name == "python":
+            cmd = [self.pacu_path, "-m", "pacu", "--new-session", session_name]
+        else:
+            cmd = [self.pacu_path, "--new-session", session_name]
         
         logger.info(
             "Creating Pacu session",
@@ -267,7 +281,7 @@ class PacuAdapter:
                 finding_id=finding.id,
                 tool='pacu',
                 module='none',
-                executed_at=anyio.current_time(),
+                executed_at=datetime.utcnow(),
                 result='not_exploitable',
                 evidence={'reason': 'No relevant Pacu modules found for validation'}
             )
@@ -286,7 +300,7 @@ class PacuAdapter:
                 finding_id=finding.id,
                 tool='pacu',
                 module=module_name,
-                executed_at=anyio.current_time(),
+                executed_at=datetime.utcnow(),
                 result='exploitable' if is_exploitable else 'not_exploitable',
                 evidence=result
             )
@@ -304,13 +318,23 @@ class PacuAdapter:
                 finding_id=finding.id,
                 tool='pacu',
                 module=module_name,
-                executed_at=anyio.current_time(),
+                executed_at=datetime.utcnow(),
                 result='error',
                 evidence={'error': str(e)}
             )
     
     def _analyze_module_result(self, result: Dict[str, Any], finding: Finding) -> bool:
         """Analyze Pacu module result to determine if finding is exploitable."""
+        # For security group findings about unrestricted access, always mark as exploitable
+        if finding.service == 'ec2' and 'security group' in finding.title.lower():
+            if 'all ports' in finding.title.lower() or '0.0.0.0/0' in str(finding.evidence):
+                logger.info(
+                    "Security group finding marked as exploitable",
+                    finding_id=finding.id,
+                    title=finding.title
+                )
+                return True
+        
         # This is a simplified analysis - in practice, this would be more sophisticated
         stdout = result.get('stdout', '').lower()
         stderr = result.get('stderr', '').lower()

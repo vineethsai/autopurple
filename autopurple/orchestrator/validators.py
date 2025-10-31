@@ -1,6 +1,7 @@
 """Post-remediation validation for AutoPurple."""
 
 import uuid
+from datetime import datetime
 from typing import Any, Dict, Optional
 
 from ..logging import get_logger
@@ -33,7 +34,7 @@ class PostRemediationValidator:
                 finding_id=finding.id,
                 tool='post_remediation',
                 module=validation_method,
-                executed_at=anyio.current_time(),
+                executed_at=datetime.utcnow(),
                 result='exploitable' if is_exploitable else 'not_exploitable',
                 evidence={
                     'validation_method': validation_method,
@@ -63,7 +64,7 @@ class PostRemediationValidator:
                 finding_id=finding.id,
                 tool='post_remediation',
                 module='error',
-                executed_at=anyio.current_time(),
+                executed_at=datetime.utcnow(),
                 result='error',
                 evidence={'error': str(e)}
             )
